@@ -29,6 +29,7 @@
 #include "engine/engine_util_misc.h"
 #include "engine/engine_util_solve.h"
 #include "engine/engine_util_sparse.h"
+#include "engine/engine_hydroelastic.h"
 
 //---------------------------------- utility functions ---------------------------------------------
 
@@ -1516,7 +1517,8 @@ static void mj_solCGNewton(const mjModel* m, mjData* d, int maxiter, int flg_New
 
   // initialize matrix-vector products
   mj_mulM(m, d, ctx.Ma, d->qacc);
-  mj_mulJacVec(m, d, ctx.Jaref, d->qacc);
+  update_aref(m, d, 0);
+  mj_mulJacVec(m, d, ctx.Jaref, d->qacc);  
   mju_subFrom(ctx.Jaref, d->efc_aref, nefc);
 
   // first update
@@ -1542,7 +1544,10 @@ static void mj_solCGNewton(const mjModel* m, mjData* d, int maxiter, int flg_New
     // move to new solution
     mju_addToScl(d->qacc, ctx.search, alpha, nv);
     mju_addToScl(ctx.Ma, ctx.Mv, alpha, nv);
-    mju_addToScl(ctx.Jaref, ctx.Jv, alpha, nefc);
+    update_aref(m, d, 1);
+    // mju_addToScl(ctx.Jaref, ctx.Jv, alpha, nefc);
+    mj_mulJacVec(m, d, ctx.Jaref, d->qacc);
+    mju_subFrom(ctx.Jaref, d->efc_aref, nefc);
 
     // save old
     if (!flg_Newton) {

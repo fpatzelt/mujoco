@@ -115,6 +115,12 @@ struct mjContact_ {                // result of collision detection functions
 
   // address computed by mj_instantiateContact
   int     efc_address;             // address in efc; -1: not included
+
+  // parameters for hydroelastic contacts
+  int     hydroelastic_contact;
+  mjtNum  fn0;
+  mjtNum  k;
+  mjtNum  d;
 };
 typedef struct mjContact_ mjContact;
 
@@ -205,6 +211,8 @@ struct mjData_ {
   // state
   mjtNum* qpos;              // position                                         (nq x 1)
   mjtNum* qvel;              // velocity                                         (nv x 1)
+  mjtNum* qvel_old;          // velocity from last timestep                      (nv x 1)
+  mjtNum* qvel_current;      // velocity tracker in solver                       (nv x 1)
   mjtNum* act;               // actuator activation                              (na x 1)
   mjtNum* qacc_warmstart;    // acceleration used for warmstart                  (nv x 1)
   mjtNum* plugin_state;      // plugin state                                     (npluginstate x 1)

@@ -1348,6 +1348,8 @@ static void _resetData(const mjModel* m, mjData* d, unsigned char debug_value) {
   // zero out arrays that are not affected by mj_forward
   mju_zero(d->qpos, m->nq);
   mju_zero(d->qvel, m->nv);
+  mju_zero(d->qvel_old, m->nv);
+  mju_zero(d->qvel_current, m->nv);
   mju_zero(d->act, m->na);
   mju_zero(d->ctrl, m->nu);
   mju_zero(d->qfrc_applied, m->nv);

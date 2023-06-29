@@ -469,6 +469,8 @@
 #define MJDATA_POINTERS                                            \
     X   ( mjtNum,    qpos,              nq,          1           ) \
     X   ( mjtNum,    qvel,              nv,          1           ) \
+    X   ( mjtNum,    qvel_current,      nv,          1           ) \
+    X   ( mjtNum,    qvel_old,          nv,          1           ) \
     XMJV( mjtNum,    act,               na,          1           ) \
     X   ( mjtNum,    qacc_warmstart,    nv,          1           ) \
     X   ( mjtNum,    plugin_state,      npluginstate, 1          ) \

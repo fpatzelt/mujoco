@@ -81,6 +81,8 @@ set(MUJOCO_ENGINE_SRCS
     engine_vis_state.h
     engine_vis_visualize.c
     engine_vis_visualize.h
+    engine_hydroelastic.c
+    engine_hydroelastic.h
 )
 
 target_sources(mujoco PRIVATE ${MUJOCO_ENGINE_SRCS})

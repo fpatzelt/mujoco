@@ -934,6 +934,10 @@ void mj_collideGeoms(const mjModel* m, mjData* d, int g1, int g2, int flg_user, 
   // increment counter of expected collisions
   d->ngeompair_mid++;
 
+  for (int i = 0; i < mjMAXCONPAIR; ++i) {
+    con[i].hydroelastic_contact = 0;
+  }
+
   // call collision detector to generate contacts
   num = mjCOLLISIONFUNC[type1][type2](m, d, con, g1, g2, margin);
 
