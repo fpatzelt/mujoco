@@ -1218,6 +1218,11 @@ void mj_makeImpedance(const mjModel* m, mjData* d) {
       // I = imp, P = imp'
       KBIP[4*(i+j)+2] = imp;
       KBIP[4*(i+j)+3] = impP;
+      if (d->efc_type[i] == mjCNSTR_CONTACT_ELLIPTIC && d->contact[d->efc_id[i]].hydroelastic_contact) {
+        // printf("%4.2f\n",imp);
+        KBIP[4*(i+j)+2] = 1;
+        KBIP[4*(i+j)+3] = 0;
+      }
     }
 
     // skip the rest of this constraint

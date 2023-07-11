@@ -1544,10 +1544,10 @@ static void mj_solCGNewton(const mjModel* m, mjData* d, int maxiter, int flg_New
     // move to new solution
     mju_addToScl(d->qacc, ctx.search, alpha, nv);
     mju_addToScl(ctx.Ma, ctx.Mv, alpha, nv);
-    update_aref(m, d, 1);
-    // mju_addToScl(ctx.Jaref, ctx.Jv, alpha, nefc);
-    mj_mulJacVec(m, d, ctx.Jaref, d->qacc);
-    mju_subFrom(ctx.Jaref, d->efc_aref, nefc);
+    // update_aref(m, d, 1);
+    mju_addToScl(ctx.Jaref, ctx.Jv, alpha, nefc);
+    // mj_mulJacVec(m, d, ctx.Jaref, d->qacc);
+    // mju_subFrom(ctx.Jaref, d->efc_aref, nefc);
 
     // save old
     if (!flg_Newton) {

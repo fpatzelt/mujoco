@@ -308,10 +308,46 @@ double CalcAlpha(const mjModel *m, mjData *d, const mjtNum *efc_v, const mjtNum 
   return alpha;
 }
 
+double CalcAtanXOverXFromXSquared(const double x2) {
+  // We are protecting the computation near x = 0 specifically so that
+  // numerical values (say double and AutoDiffXd) do not lead to ill-formed
+  // expressions with divisions by zero.
+  const double x_cuttoff = 0.12;
+  const double x_cutoff_squared = x_cuttoff * x_cuttoff;
+  if (x2 <= x_cutoff_squared) {
+    // We use the Taylor expansion of f(x)=atan(x)/x below a given cutoff
+    // x_cutoff, since neither atan(x)/x nor its automatic derivatives with
+    // AutodiffXd can be evaluated at x = 0. However, f(x) is well defined
+    // mathematically given its limits from left and right exist. Choosing
+    // the value of x_cutoff and the number of terms is done to minimize the
+    // amount of round-off errors. We estimated these values by comparing
+    // against reference values computed with Variable Precision Arithmetic.
+    // For further details please refer to Drake issue #15029 documenting this
+    // process.
+
+    // clang-format off
+      return 1. -
+             x2 * (1. / 3. -
+             x2 * (1. / 5. -
+             x2 * (1. / 7. -
+             x2 * (1. / 9. -
+             x2 * (1. / 11. -
+             x2 * (1. / 13. -
+             x2 * (1. / 15. -
+             x2 / 17.)))))));
+    // clang-format on
+  }
+  // using std::atan;
+  // using std::sqrt;
+  const double x = sqrt(x2);
+  return atan(x) / x;
+}
+
 void update_aref(const mjModel *m, mjData *d, const int update_qvel)
 {
   mjMARKSTACK;
   const double v_stiction = 1.0e-4;
+  // const double  vslip_regularizer_ = 1e-6;
   double relative_tolerance = 1.0e-2;
   mjtNum *qvel = mj_stackAlloc(d, m->nv);
   mjtNum *qvel_diff = mj_stackAlloc(d, m->nv);
@@ -339,7 +375,7 @@ void update_aref(const mjModel *m, mjData *d, const int update_qvel)
     // if (0) {
     double alpha = CalcAlpha(m, d, efc_qvel_current, efc_qvel_diff);
     // }
-    mju_addToScl(d->qvel_current, qvel_diff, 0.2 * alpha, m->nv);
+    mju_addToScl(d->qvel_current, qvel_diff, alpha, m->nv);
     mju_copy(qvel, d->qvel_current, m->nv);
 
     // mju_scl(d->qacc, d->qacc_smooth, 2, m->nv);
@@ -358,6 +394,7 @@ void update_aref(const mjModel *m, mjData *d, const int update_qvel)
 
   // mju_printMat(qvel, 1, m->nv);
 
+
   for (int i = 0; i < d->ncon; ++i)
   {
     // int i0 = idx[i];
@@ -369,17 +406,22 @@ void update_aref(const mjModel *m, mjData *d, const int update_qvel)
     }
 
     double damping = c.d;
+    
     double stiffness = c.k;
+    // printf("%4.2f\n",1.212);
     double fn0 = c.fn0;
 
     int ic = c.efc_address;
 
-    const double signed_damping_factor = (1.0 - damping * d->efc_vel[ic]);
+    const double signed_damping_factor = (1.0 -  damping * d->efc_vel[ic]);
+
     const double damping_factor = mjMAX(0.0, signed_damping_factor);
 
+  
     // fₙ = (1 − d vₙ)₊ (fₙ₀ − h k vₙ)₊
 
-    const double signed_undamped_fn = fn0 - m->opt.timestep * stiffness * d->efc_vel[ic];
+    const double signed_undamped_fn = fn0 - 0 * m->opt.timestep * stiffness * d->efc_vel[ic];
+    // printf("fn0 vs  sufn %4.2f %4.2f\n", fn0, signed_undamped_fn);
     const double undamped_fn = mjMAX(0.0, signed_undamped_fn);
     // std::cout << "signed_damping_factor: " << signed_damping_factor << " signed_undamped_fn " << signed_undamped_fn << std::endl;
 
@@ -395,6 +437,8 @@ void update_aref(const mjModel *m, mjData *d, const int update_qvel)
 
     if (c.dim == 3)
     {
+
+      if (1) {
       const double mu = c.friction[1];
 
       // The stiction tolerance.
@@ -405,22 +449,43 @@ void update_aref(const mjModel *m, mjData *d, const int update_qvel)
       mjtNum *vt_ic = d->efc_vel + ic + 1;
 
       // "soft norm":
+      // const double v_slip = (pow(vt_ic[0], 2) + pow(vt_ic[1], 2) + epsilon_v2);
       const double v_slip = sqrt(pow(vt_ic[0], 2) + pow(vt_ic[1], 2) + epsilon_v2);
-      // "soft" tangent vector:
-      // const Vector2<double> that_ic = vt_ic / v_slip;
-      // const Vector2<double> t_hat = that_ic;
+      // // "soft" tangent vector:
+      // // const Vector2<double> that_ic = vt_ic / v_slip;
+      // // const Vector2<double> t_hat = that_ic;
       double mu_regularized = RegularizedFriction(v_slip / v_stiction, mu);
+
+      // const double vs_squared = vslip_regularizer_ * vslip_regularizer_ + 0 * mu_regularized;
+      // const double x_squared = v_slip / vs_squared;
+
+      // const double regularized_friction = (2.0 / M_PI) * mu * fn *
+      //                            CalcAtanXOverXFromXSquared(x_squared) /
+      //                            vslip_regularizer_;  // [Ns/m].
+      // const Vector3<T> ft_Aq_W = -regularized_friction * vt_BqAq_W;
       // Friction force.
       // Vector2<double> ft = -mu_regularized * that_ic * fn;
       for (int j = 0; j < 2; ++j)
       {
         double that_ic = vt_ic[j] / v_slip;
         double ft = -mu_regularized * that_ic * fn;
+        // double ft = -regularized_friction * vt_ic[j];
         int ii = ic + j + 1;
         d->efc_aref[ii] = ft * d->efc_R[ii]; // + efc_acc_smooth[ii];// * d->efc_KBIP[4*ii+2] / (1-d->efc_KBIP[4*ii+2]);// + efc_acc_smooth[ic + j + 1];
       }
+
+      } else {
+         for (int j = 0; j < 2; ++j)
+      {
+        int ii = ic + j + 1;
+        d->efc_aref[ii] = mjMAX(0,  fn0 * (0.0 - damping * d->efc_vel[ii])) * d->efc_R[ii];
+
+      }
+      }
+      
     }
   }
+ 
   // mju_printMat(d->efc_aref, 1, d->nefc);
   mjFREESTACK;
 }
